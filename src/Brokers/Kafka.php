@@ -104,7 +104,7 @@ class Kafka implements Broker
         $result = $producer->flush(self::FLUSH_TIMEOUT);
 
         if (RD_KAFKA_RESP_ERR_NO_ERROR !== $result) {
-            throw new Exception('librdkafka unable to perform flush, messages might be lost');
+            throw new \Exception('librdkafka unable to perform flush, messages might be lost');
         }
     }
 }
