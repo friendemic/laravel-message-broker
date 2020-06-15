@@ -6,7 +6,7 @@ Produce and consume messages from a Message Broker (Kafka) in Laravel.
 
 * PHP >= 7.2.0
 * Laravel >= 5.6
-*[RdKafka extension] (https://arnaud.le-blanc.net/php-rdkafka-doc/phpdoc/book.rdkafka.html)
+* [RdKafka extension](https://arnaud.le-blanc.net/php-rdkafka-doc/phpdoc/book.rdkafka.html)
 
 ## Installation
 
