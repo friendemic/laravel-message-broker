@@ -82,15 +82,15 @@ class KafkaTest extends TestCase
         ];
         $kafka = new Kafka($config);
 
-        // producer should not be set on instantiation
+        // consumer should not be set on instantiation
         $this->assertNull($kafka->getConsumer());
 
-        // calling ->producer() should instatiate default Producer instance
+        // calling ->consumer() should instatiate default Producer instance
         $consumer = $kafka->consumer();
         $this->assertTrue(is_a($consumer, \RdKafka\KafkaConsumer::class));
         $this->assertTrue(is_a($kafka->getConsumer(), \RdKafka\KafkaConsumer::class));
 
-        // test can set producer by passing a mock
+        // test can set consumer by passing a mock
         $mock = $this->createMock(\RdKafka\KafkaConsumer::class);
         $mock->expects($this->once())
              ->method('consume')

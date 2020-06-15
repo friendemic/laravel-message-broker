@@ -172,6 +172,14 @@ class Kafka implements Broker
         }
     }
 
+    /**
+     * Consume next message on topic
+     *
+     * @param string $topicName
+     * @param integer $timeout
+     * @param Closure $handler
+     * @return void
+     */
     public function consumeNext(string $topicName, int $timeout, Closure $handler): void 
     {
         $consumer = $this->consumer();
