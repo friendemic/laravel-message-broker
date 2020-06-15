@@ -15,6 +15,8 @@ jobs:
           - 7.3
     runs-on: ubuntu-latest
     steps:
+      - name: install rdkafka
+        run: sudo apt-get install -y librdkafka-dev
       - name: Checkout
         uses: actions/checkout@v2
       - name: Setup PHP, with composer and extensions
