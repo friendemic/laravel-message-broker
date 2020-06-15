@@ -37,6 +37,13 @@ class Kafka implements Broker
     protected $consumer;
 
     /**
+     * Name of topic subscribed to
+     *
+     * @var string
+     */
+    protected $subscription;
+
+    /**
      * Kafka broker constructor
      * 
      * @param array $config
@@ -169,7 +176,11 @@ class Kafka implements Broker
     {
         $consumer = $this->consumer();
 
-        $consumer->subscribe([$topicName]);
+        // subscribe to topic if not already subscribed
+        if ($topicName !== $this->subscription) {
+            $consumer->subscribe([$topicName]);
+            $this->subscription = $topicName;
+        }
 
         $message = $consumer->consume($timeout);
         switch ($message->err) {

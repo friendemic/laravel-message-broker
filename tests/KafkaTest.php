@@ -142,5 +142,22 @@ class KafkaTest extends TestCase
         };
         $kafka->consumeNext('test-topic', 120*1000, $handler);
         $this->assertEquals('test message', $called);
+
+        // call again to make sure subscribe is not called again
+        // mock consume and return message
+        $mockMessage2 = new \RdKafka\Message;
+        $mockMessage2->payload = 'test message2';
+        $consumerMock2 = $this->createMock(\RdKafka\KafkaConsumer::class);
+        $consumerMock2->expects($this->once())
+            ->method('consume')
+            ->willReturn($mockMessage2);
+
+        // expect commit
+        $consumerMock2->expects($this->once())
+            ->method('commitAsync')
+            ->with($this->equalTo($mockMessage2))
+            ->willReturn(null);
+        $kafka->setConsumer($consumerMock2);
+        $kafka->consumeNext('test-topic', 120*1000, $handler);
     }
 }
