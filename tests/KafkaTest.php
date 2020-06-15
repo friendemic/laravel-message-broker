@@ -68,4 +68,79 @@ class KafkaTest extends TestCase
         $kafka->send('test-topic', 'test message', 'test-key');
     }
 
+    /** @test */
+    function kafkaBroker_consumer()
+    {
+        // set config
+        $config = [
+            'driver'      => 'kafka',
+            'broker_list' => 'some.where.at:port',
+            'debug'       => false,
+            'config'      => [
+                'group.id' => 'myConsumerGroup'
+            ]
+        ];
+        $kafka = new Kafka($config);
+
+        // producer should not be set on instantiation
+        $this->assertNull($kafka->getConsumer());
+
+        // calling ->producer() should instatiate default Producer instance
+        $consumer = $kafka->consumer();
+        $this->assertTrue(is_a($consumer, \RdKafka\KafkaConsumer::class));
+        $this->assertTrue(is_a($kafka->getConsumer(), \RdKafka\KafkaConsumer::class));
+
+        // test can set producer by passing a mock
+        $mock = $this->createMock(\RdKafka\KafkaConsumer::class);
+        $mock->expects($this->once())
+             ->method('consume')
+             ->with($this->equalTo(10000));
+        $kafka->setConsumer($mock);
+        $kafka->getConsumer()->consume(10000);
+    }
+
+    /** @test */
+    function kafkaBroker_consumes_next()
+    {
+        // set config
+        $config = [
+            'driver'      => 'kafka',
+            'broker_list' => 'some.where.at:port',
+            'debug'       => false,
+            'config'      => [
+                'group.id' => 'myConsumerGroup'
+            ]
+        ];
+        $kafka = new Kafka($config);
+
+        // Create a mock for the RdKafka\KafkaConsumer class.
+        $consumerMock = $this->createMock(\RdKafka\KafkaConsumer::class);
+        // expect topic subscription
+        $consumerMock->expects($this->once())
+             ->method('subscribe')
+             ->with($this->equalTo(['test-topic']))
+             ->willReturn(null);
+
+        // mock consume and return message
+        $mockMessage = new \RdKafka\Message;
+        $mockMessage->payload = 'test message';
+        $consumerMock->expects($this->once())
+            ->method('consume')
+            ->willReturn($mockMessage);
+
+        // expect commit
+        $consumerMock->expects($this->once())
+            ->method('commitAsync')
+            ->with($this->equalTo($mockMessage))
+            ->willReturn(null);
+
+        // setup consumer and message handler
+        $kafka->setConsumer($consumerMock);
+        $called = '';
+        $handler = function(string $payload) use (&$called) {
+            $called = $payload;
+        };
+        $kafka->consumeNext('test-topic', 120*1000, $handler);
+        $this->assertEquals('test message', $called);
+    }
 }

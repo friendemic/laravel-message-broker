@@ -5,6 +5,8 @@ namespace Friendemic\MessageBroker\Brokers;
 use Friendemic\MessageBroker\Contracts\Broker;
 use RdKafka\Conf;
 use RdKafka\Producer;
+use RdKafka\KafkaConsumer;
+use Closure;
 
 class Kafka implements Broker 
 {
@@ -28,6 +30,13 @@ class Kafka implements Broker
     protected $producer;
 
     /**
+     * RdKafka consumer
+     *
+     * @var KafkaConsumer
+     */
+    protected $consumer;
+
+    /**
      * Kafka broker constructor
      * 
      * @param array $config
@@ -42,6 +51,14 @@ class Kafka implements Broker
             $conf->set('log_level', LOG_DEBUG);
             $conf->set('debug', 'all');
         }
+        
+        // set additional config options
+        if (! empty($config['config'])) {
+            foreach( $config['config'] as $key => $value) {
+                $conf->set($key, $value); 
+            }
+        }
+
         $this->conf = $conf;
     }
 
@@ -86,6 +103,46 @@ class Kafka implements Broker
     }
 
     /**
+     * Set consumer instance
+     *
+     * @param KafkaConsumer $consumer
+     * @return void
+     */
+    public function setConsumer(KafkaConsumer $consumer): void
+    {
+        $this->consumer = $consumer;
+    }
+
+    /**
+     * Get consumer instance
+     *
+     * @return KafkaConsumer
+     */
+    public function getConsumer(): ?KafkaConsumer
+    {
+        return $this->consumer;
+    }
+
+    /**
+     * Resolves consumer
+     * Gets existing or creates new from conf
+     *
+     * @return KafkaConsumer
+     */
+    public function consumer(): KafkaConsumer
+    {
+        $consumer = $this->getConsumer();
+
+        if (is_null($consumer)) {
+            $consumer = new KafkaConsumer($this->conf);
+            $this->consumer = $consumer;
+        }
+        
+
+        return $consumer;
+    }
+
+    /**
      * Produce and send message to broker
      *
      * @param string $topicName
@@ -105,6 +162,31 @@ class Kafka implements Broker
 
         if (RD_KAFKA_RESP_ERR_NO_ERROR !== $result) {
             throw new \Exception('librdkafka unable to perform flush, messages might be lost');
+        }
+    }
+
+    public function consumeNext(string $topicName, int $timeout, Closure $handler): void 
+    {
+        $consumer = $this->consumer();
+
+        $consumer->subscribe([$topicName]);
+
+        $message = $consumer->consume($timeout);
+        switch ($message->err) {
+            case RD_KAFKA_RESP_ERR_NO_ERROR:
+                $handler($message->payload);
+                // Commit offsets asynchronously
+                $consumer->commitAsync($message);
+                break;
+            case RD_KAFKA_RESP_ERR__PARTITION_EOF:
+                // ?
+                break;
+            case RD_KAFKA_RESP_ERR__TIMED_OUT:
+                // ?
+                break;
+            default:
+                throw new \Exception($message->errstr(), $message->err);
+                break;
         }
     }
 }

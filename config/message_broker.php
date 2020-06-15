@@ -26,6 +26,11 @@
             'driver'      => 'kafka',
             'broker_list' => env('KAFKA_BROKERS', null),
             'debug'       => false,
+            // pass additional configuration options here
+            // see // https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+            // 'config'      => [
+            //     'group.id' => 'myConsumerGroup'
+            // ], 
         ],
     ]
 ];
