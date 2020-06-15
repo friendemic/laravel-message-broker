@@ -1,5 +1,9 @@
 # Laravel Message Broker
 
+[![CI State](https://github.com/friendemic/
+laravel-message-broker/workflows/CI%20Test/badge.svg)](https://github.com/friendemic/
+laravel-message-broker/actions?query=workflow%3A"CI+Test")
+
 Produce and consume messages from a Message Broker (Kafka) in Laravel.
 
 ## Requirements
