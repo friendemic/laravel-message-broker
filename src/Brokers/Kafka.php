@@ -75,7 +75,7 @@ class Kafka implements Broker
      * @param Producer $producer
      * @return void
      */
-    public function setProducer(Producer $producer): void
+    public function setProducer(?Producer $producer): void
     {
         $this->producer = $producer;
     }
@@ -166,6 +166,8 @@ class Kafka implements Broker
         $topic->produce(RD_KAFKA_PARTITION_UA, 0, $message, $key);
 
         $result = $producer->flush(self::FLUSH_TIMEOUT);
+
+        $this->setProducer(null);
 
         if (RD_KAFKA_RESP_ERR_NO_ERROR !== $result) {
             throw new \Exception('librdkafka unable to perform flush, messages might be lost');
