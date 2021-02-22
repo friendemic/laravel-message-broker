@@ -3,18 +3,17 @@
 namespace Friendemic\MessageBroker\Traits;
 
 use Doctrine\DBAL\Types\Types;
-use Friendemic\MessageBroker\MessageHandlers\BaseMessageHandler;
 use Google\Protobuf\Internal\Message;
 use Google\Protobuf\Timestamp;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-/**
- * @mixin Model
- * @mixin BaseMessageHandler
- */
 trait SerializeToProtobuf
 {
+    /**
+     * @var Message
+     */
+    protected $protobufInstance;
+
     /**
      * Convert an Eloquent model instance to it's Protobuf counterpart.
      *
@@ -22,16 +21,24 @@ trait SerializeToProtobuf
      */
     public function toProtobuf(): Message
     {
-        $instance = $this->newProtobufInstance();
-
         foreach ($this->attributesToArray() as $name => $value) {
             $column = $this->getConnection()->getDoctrineColumn($this->getTable(), $name);
-            $method = sprintf('set%s', Str::title($name));
 
-            if (!method_exists($this, $method)) {
+            $methods = collect([
+                sprintf('set%s', Str::title($name)),
+                sprintf('set%sUnwrapped', Str::title($name))
+            ]);
+
+            $exists = $methods->some(function ($v) {
+                return method_exists($this, $v);
+            });
+
+            // Verify either the default setter or the unwrapped helper setter methods exist.
+            if (!$exists) {
                 continue;
             }
 
+            // Do any type conversion or data coalescing based on the data type as defined in the schema.
             switch ($column->getType()->getName()) {
                 case Types::DATE_IMMUTABLE:
                 case Types::DATE_MUTABLE:
@@ -42,14 +49,21 @@ trait SerializeToProtobuf
                 case Types::DATETIMETZ_MUTABLE:
                     $timestamp = new Timestamp();
                     $timestamp->setSeconds(strtotime($value));
-                    $instance->$method($timestamp);
+                    $this->protobufInstance->$methods[0]($timestamp);
                     break;
                 default:
-                    $instance->$method($value);
+                    // Attempt to set the attribute value using the default setter.
+                    // Otherwise use the "Unwrapped" helper setter.
+                    try {
+                        $this->protobufInstance->$methods[0]($value);
+                    } catch (\Exception $exception) {
+                        $this->protobufInstance->$methods[1]($value);
+                    }
+
             }
         }
 
-        return $instance;
+        return $this->protobufInstance;
     }
 
     /**
@@ -60,5 +74,18 @@ trait SerializeToProtobuf
     public function toSerializedPb(): string
     {
         return $this->toProtobuf()->serializeToString();
+    }
+
+    /**
+     * Set the target protobuf instance used for serialization.
+     *
+     * @param  Message  $instance
+     * @return $this
+     */
+    public function setProtobufMessageInstance(Message $instance): self
+    {
+        $this->protobufInstance = $instance;
+
+        return $this;
     }
 }

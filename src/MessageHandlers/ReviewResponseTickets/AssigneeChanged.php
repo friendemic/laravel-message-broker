@@ -22,7 +22,7 @@ class AssigneeChanged extends BaseMessageHandler
     /**
      * @return Message|ReviewResponseTicket
      */
-    public function newProtobufInstance(): Message
+    public function newProtobufMessageInstance(): Message
     {
         return new ReviewResponseTicket();
     }

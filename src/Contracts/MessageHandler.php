@@ -1,8 +1,6 @@
 <?php
 
-
 namespace Friendemic\MessageBroker\Contracts;
-
 
 use Friendemic\MessageBroker\Exceptions\SerializeToProtobufNotImplementedException;
 use Google\Protobuf\Internal\Message;
@@ -15,7 +13,7 @@ interface MessageHandler
      *
      * @return Message
      */
-    public function newProtobufInstance(): Message;
+    public function newProtobufMessageInstance(): Message;
 
     /**
      * Check if the message broker is configured.

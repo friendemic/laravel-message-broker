@@ -25,7 +25,7 @@ abstract class BaseMessageHandler implements MessageHandler
      *
      * @return Message
      */
-    abstract public function newProtobufInstance(): Message;
+    abstract public function newProtobufMessageInstance(): Message;
 
     /**
      * Check if the message broker is configured.
@@ -48,6 +48,8 @@ abstract class BaseMessageHandler implements MessageHandler
      */
     public function prepare(Model $model): MessageHandler
     {
+        $model->setProtobufMessageInstance($this->newProtobufMessageInstance());
+
         if (method_exists($model, 'toSerializedPb')) {
             $this->serializedPb = base64_encode($model->toSerializedPb());
         } else {
