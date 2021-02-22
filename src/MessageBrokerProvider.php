@@ -11,7 +11,7 @@ class MessageBrokerProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(): void
     {
         $this->publishes([
             __DIR__ . '/../config/message_broker.php' => config_path('message_broker.php')
@@ -23,7 +23,7 @@ class MessageBrokerProvider extends ServiceProvider
      *
      * @return void
      */
-    public function register()
+    public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/message_broker.php', 'message_broker');
 
@@ -32,7 +32,10 @@ class MessageBrokerProvider extends ServiceProvider
         });
     }
 
-    public function provides()
+    /**
+     * @return array
+     */
+    public function provides(): array
     {
         return ['message_broker'];
     }

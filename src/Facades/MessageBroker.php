@@ -2,8 +2,10 @@
 
 namespace Friendemic\MessageBroker\Facades;
 
+use Friendemic\MessageBroker\Brokers\Kafka;
 use Illuminate\Support\Facades\Facade;
 
+/** @mixin Kafka */
 class MessageBroker extends Facade
 {
     /**
@@ -11,7 +13,7 @@ class MessageBroker extends Facade
      *
      * @return string
      */
-    protected static function getFacadeAccessor()
+    protected static function getFacadeAccessor(): string
     {
         return 'message_broker';
     }

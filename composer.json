@@ -5,10 +5,15 @@
         {
             "name": "Aaron Kaczmarek",
             "email": "aaronmichaelmusic@gmail.com"
+        },
+        {
+            "name": "Brian Lee",
+            "email": "brianlee@friendemic.com"
         }
     ],
     "require": {
         "php": ">=7.2.0",
+        "friendemic/friendemic-api-php": "dev-master",
         "illuminate/support": "^5.6 || ^6.0 || ^7.0"
     },
     "require-dev": {
@@ -16,6 +21,12 @@
         "orchestra/testbench": "^5.3",
         "ext-rdkafka": "^4.0"
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/friendemic/friendemic-api-php"
+        }
+    ],
     "suggest": {
         "ext-rdkafka": "Install RdKafka for Kafka support https://arnaud.le-blanc.net/php-rdkafka-doc/phpdoc/rdkafka.setup.html"
     },

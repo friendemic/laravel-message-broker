@@ -1,24 +1,25 @@
-<?php 
+<?php
 
 namespace Friendemic\MessageBroker\Brokers;
 
+use Closure;
 use Friendemic\MessageBroker\Contracts\Broker;
 use RdKafka\Conf;
-use RdKafka\Producer;
+use RdKafka\Exception;
 use RdKafka\KafkaConsumer;
-use Closure;
+use RdKafka\Producer;
 
-class Kafka implements Broker 
+class Kafka implements Broker
 {
     /**
      * Producer flush timeout in milliseconds
      */
-    const FLUSH_TIMEOUT = 10000;
-    
+    public const FLUSH_TIMEOUT = 10000;
+
     /**
      * RdKakfa configuration
      *
-     * @var Confg
+     * @var Conf
      */
     protected $conf;
 
@@ -45,24 +46,24 @@ class Kafka implements Broker
 
     /**
      * Kafka broker constructor
-     * 
-     * @param array $config
+     *
+     * @param  array  $config
      */
-    public function __construct(array $config) 
+    public function __construct(array $config)
     {
         $conf = new Conf();
-      
+
         $conf->set('metadata.broker.list', $config['broker_list']);
 
         if ($config['debug']) {
             $conf->set('log_level', LOG_DEBUG);
             $conf->set('debug', 'all');
         }
-        
+
         // set additional config options
-        if (! empty($config['config'])) {
-            foreach( $config['config'] as $key => $value) {
-                $conf->set($key, $value); 
+        if (!empty($config['config'])) {
+            foreach ($config['config'] as $key => $value) {
+                $conf->set($key, $value);
             }
         }
 
@@ -72,7 +73,7 @@ class Kafka implements Broker
     /**
      * Set producer instance
      *
-     * @param Producer $producer
+     * @param ?Producer  $producer
      * @return void
      */
     public function setProducer(?Producer $producer): void
@@ -104,7 +105,7 @@ class Kafka implements Broker
             $producer = new Producer($this->conf);
             $this->producer = $producer;
         }
-        
+
 
         return $producer;
     }
@@ -112,7 +113,7 @@ class Kafka implements Broker
     /**
      * Set consumer instance
      *
-     * @param KafkaConsumer $consumer
+     * @param  KafkaConsumer  $consumer
      * @return void
      */
     public function setConsumer(KafkaConsumer $consumer): void
@@ -144,7 +145,7 @@ class Kafka implements Broker
             $consumer = new KafkaConsumer($this->conf);
             $this->consumer = $consumer;
         }
-        
+
 
         return $consumer;
     }
@@ -152,17 +153,18 @@ class Kafka implements Broker
     /**
      * Produce and send message to broker
      *
-     * @param string $topicName
-     * @param string $message
-     * @param string $key
+     * @param  string  $topicName
+     * @param  string  $message
+     * @param  string|null  $key
      * @return void
+     * @throws \Exception
      */
-    public function send(string $topicName, string $message, string $key = null): void 
+    public function send(string $topicName, string $message, string $key = null): void
     {
         $producer = $this->producer();
 
         $topic = $producer->newTopic($topicName);
-        
+
         $topic->produce(RD_KAFKA_PARTITION_UA, 0, $message, $key);
 
         $result = $producer->flush(self::FLUSH_TIMEOUT);
@@ -177,12 +179,13 @@ class Kafka implements Broker
     /**
      * Consume next message on topic
      *
-     * @param string $topicName
-     * @param integer $timeout
-     * @param Closure $handler
+     * @param  string  $topicName
+     * @param  integer  $timeout
+     * @param  Closure  $handler
      * @return void
+     * @throws Exception
      */
-    public function consumeNext(string $topicName, int $timeout, Closure $handler): void 
+    public function consumeNext(string $topicName, int $timeout, Closure $handler): void
     {
         $consumer = $this->consumer();
 

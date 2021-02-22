@@ -2,16 +2,17 @@
 
 namespace Friendemic\MessageBroker;
 
+use Friendemic\MessageBroker\Contracts\Broker;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Manager;
 use InvalidArgumentException;
 
-class MessageBrokerManager 
+class MessageBrokerManager
 {
     /**
      * The application instance.
      *
-     * @var \Illuminate\Foundation\Application
+     * @var Application
      */
     protected $app;
 
@@ -25,10 +26,10 @@ class MessageBrokerManager
     /**
      * Create a new message broker manager instance.
      *
-     * @param  \Illuminate\Foundation\Application  $app
+     * @param  Application  $app
      * @return void
      */
-    public function __construct($app)
+    public function __construct(Application $app)
     {
         $this->app = $app;
     }
@@ -36,7 +37,7 @@ class MessageBrokerManager
     /**
      * Get a message broker broker instance.
      *
-     * @param  string  $name
+     * @param  string|null  $name
      * @return Broker
      */
     public function broker(string $name = null)
@@ -45,7 +46,7 @@ class MessageBrokerManager
 
         // If we haven't created this broker, we'll create it based on the config
         // provided in the application and cache it for later
-        if (! isset($this->brokers[$name])) {
+        if (!isset($this->brokers[$name])) {
             $this->brokers[$name] = $this->makeBroker($name);
         }
 
@@ -55,15 +56,17 @@ class MessageBrokerManager
     /**
      * Make broker instance
      *
-     * @param string $name
+     * @param  string  $name
      * @return Broker
      */
     protected function makeBroker(string $name)
     {
         $config = $this->configuration($name);
-        if (! isset($config['driver'])) {
+
+        if (!isset($config['driver'])) {
             throw new InvalidArgumentException('A driver must be specified.');
         }
+
         switch ($config['driver']) {
             case 'kafka':
                 return $this->createKafkaBroker($config);
@@ -78,7 +81,7 @@ class MessageBrokerManager
      * @param  string  $name
      * @return array
      *
-     * @throws \InvalidArgumentException
+     * @throws InvalidArgumentException
      */
     protected function configuration(string $name): array
     {
@@ -95,7 +98,7 @@ class MessageBrokerManager
 
         return $config;
     }
-  
+
     /**
      * Get the default broker name.
      *
@@ -111,7 +114,7 @@ class MessageBrokerManager
      *
      * @return Brokers\Kafka
      */
-    public function createKafkaBroker(array $config)
+    public function createKafkaBroker(array $config): Brokers\Kafka
     {
         return new Brokers\Kafka($config);
     }
@@ -121,7 +124,7 @@ class MessageBrokerManager
      *
      * @return array
      */
-    public function getBrokers()
+    public function getBrokers(): array
     {
         return $this->brokers;
     }
@@ -130,10 +133,10 @@ class MessageBrokerManager
      * Dynamically pass methods to the default broker.
      *
      * @param  string  $method
-     * @param  array   $parameters
+     * @param  array  $parameters
      * @return mixed
      */
-    public function __call($method, $parameters)
+    public function __call(string $method, array $parameters)
     {
         return $this->broker()->$method(...$parameters);
     }
