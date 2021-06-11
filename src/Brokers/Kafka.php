@@ -2,6 +2,7 @@
 
 namespace Friendemic\MessageBroker\Brokers;
 
+use Exception;
 use Friendemic\MessageBroker\Contracts\Broker;
 use RdKafka\Conf;
 use RdKafka\Producer;
@@ -14,11 +15,16 @@ class Kafka implements Broker
      * Producer flush timeout in milliseconds
      */
     const FLUSH_TIMEOUT = 10000;
+
+    /**
+     * Sleep for 10 seconds before retrying to consume.
+     */
+    const RETRY_DELAY = 1000 * 1000 * 10;
     
     /**
      * RdKakfa configuration
      *
-     * @var Confg
+     * @var Conf
      */
     protected $conf;
 
@@ -72,7 +78,7 @@ class Kafka implements Broker
     /**
      * Set producer instance
      *
-     * @param Producer $producer
+     * @param Producer|null $producer
      * @return void
      */
     public function setProducer(?Producer $producer): void
@@ -154,8 +160,9 @@ class Kafka implements Broker
      *
      * @param string $topicName
      * @param string $message
-     * @param string $key
+     * @param string|null $key
      * @return void
+     * @throws Exception
      */
     public function send(string $topicName, string $message, string $key = null): void 
     {
@@ -170,7 +177,7 @@ class Kafka implements Broker
         $this->setProducer(null);
 
         if (RD_KAFKA_RESP_ERR_NO_ERROR !== $result) {
-            throw new \Exception('librdkafka unable to perform flush, messages might be lost');
+            throw new Exception('librdkafka unable to perform flush, messages might be lost');
         }
     }
 
@@ -181,33 +188,51 @@ class Kafka implements Broker
      * @param integer $timeout
      * @param Closure $handler
      * @return void
+     * @throws Exception
      */
     public function consumeNext(string $topicName, int $timeout, Closure $handler): void 
     {
-        $consumer = $this->consumer();
+        $processed = false;
 
-        // subscribe to topic if not already subscribed
-        if ($topicName !== $this->subscription) {
-            $consumer->subscribe([$topicName]);
-            $this->subscription = $topicName;
-        }
+        // Naive retry mechanism blocks in certain cases. The better approach is implementing retry topics
+        // for messages which failed to be consumed.
+        // See: https://blog.pragmatists.com/retrying-consumer-architecture-in-the-apache-kafka-939ac4cb851a
+        //      https://medium.com/naukri-engineering/retry-mechanism-and-delay-queues-in-apache-kafka-528a6524f722
 
-        $message = $consumer->consume($timeout);
-        switch ($message->err) {
-            case RD_KAFKA_RESP_ERR_NO_ERROR:
-                $handler($message->payload);
-                // Commit offsets asynchronously
-                $consumer->commitAsync($message);
-                break;
-            case RD_KAFKA_RESP_ERR__PARTITION_EOF:
-                // ?
-                break;
-            case RD_KAFKA_RESP_ERR__TIMED_OUT:
-                // ?
-                break;
-            default:
-                throw new \Exception($message->errstr(), $message->err);
-                break;
-        }
+        do {
+            $consumer = $this->consumer();
+
+            // subscribe to topic if not already subscribed
+            if ($topicName !== $this->subscription) {
+                $consumer->subscribe([$topicName]);
+                $this->subscription = $topicName;
+            }
+
+            $message = $consumer->consume($timeout);
+
+            switch ($message->err) {
+                case RD_KAFKA_RESP_ERR_NO_ERROR:
+                    $handler($message->payload);
+                    // Commit offsets asynchronously
+                    $consumer->commitAsync($message);
+                    $processed = true;
+                    break;
+                case RD_KAFKA_RESP_ERR__PARTITION_EOF:
+                    // signals that the end of the partition has been reached, which should typically not be
+                    // considered an error. The application should handle this case (e.g., ignore).
+                    $processed = true;
+                    break;
+                case RD_KAFKA_RESP_ERR__TIMED_OUT:
+                    // Operation timed out.
+                    $processed = true;
+                    break;
+                case RD_KAFKA_RESP_ERR_GROUP_LOAD_IN_PROGRESS:
+                    // Group coordinator load in progress. Sleep and retry to consume the message.
+                    usleep(self::RETRY_DELAY);
+                    break;
+                default:
+                    throw new Exception($message->errstr(), $message->err);
+            }
+        } while (!$processed);
     }
 }
